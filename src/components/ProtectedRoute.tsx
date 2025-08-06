@@ -1,11 +1,13 @@
 'use client'
 
 import { useAuth } from '../hooks/useAuth'
-import { LandingPage } from '../components/LandingPage'
-import { Dashboard } from '../components/Dashboard'
 import { motion } from 'framer-motion'
 
-export default function Home() {
+interface ProtectedRouteProps {
+  children: React.ReactNode
+}
+
+export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, isInitialized } = useAuth()
 
   if (!isInitialized) {
@@ -20,5 +22,9 @@ export default function Home() {
     )
   }
 
-  return isAuthenticated ? <Dashboard /> : <LandingPage />
+  if (!isAuthenticated) {
+    return null // useAuthRedirect hook will handle redirect
+  }
+
+  return <>{children}</>
 }
