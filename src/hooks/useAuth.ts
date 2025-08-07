@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from './redux'
 export const useAuth = () => {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  const { user, loading, error, isAuthenticated, isInitialized } = useAppSelector(
+  const { user, loading, error, isAuthenticated, isInitialized, needsVerification } = useAppSelector(
     (state) => state.auth
   )
 
@@ -19,6 +19,8 @@ export const useAuth = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.id)
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         dispatch(setUser(session?.user || null))
       } else if (event === 'SIGNED_OUT') {
@@ -40,6 +42,7 @@ export const useAuth = () => {
     error,
     isAuthenticated,
     isInitialized,
+    needsVerification,
     logout,
   }
 }

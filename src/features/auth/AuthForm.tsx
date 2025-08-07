@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { useAppDispatch, useAppSelector } from '../../hooks/redux'
-import { signIn, signUp, verifyOtp, clearError } from './authSlice'
+import { signIn, signUp, verifyOtp, clearError, setError } from './authSlice'
 import { validatePassword } from '../../lib/utils'
 
 type AuthMode = 'signin' | 'signup' | 'verify'
@@ -23,27 +24,61 @@ export const AuthForm = () => {
   })
 
   const dispatch = useAppDispatch()
-  const { loading, error } = useAppSelector((state) => state.auth)
+  const router = useRouter()
+  const { loading, error, isAuthenticated, needsVerification } = useAppSelector((state) => state.auth)
+
+  // Redirect to dashboard if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, router])
+
+  // Switch to verification mode if needed
+  useEffect(() => {
+    if (needsVerification && mode === 'signup') {
+      setMode('verify')
+    }
+  }, [needsVerification, mode])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     dispatch(clearError())
 
     if (mode === 'signin') {
-      dispatch(signIn({ email: formData.email, password: formData.password }))
-    } else if (mode === 'signup') {
-      if (!validatePassword(formData.password)) {
+      if (!formData.email || !formData.password) {
+        dispatch(setError('Please fill in all fields'))
         return
       }
+      dispatch(signIn({ email: formData.email, password: formData.password }))
+    } else if (mode === 'signup') {
+      if (!formData.email || !formData.password || !formData.username) {
+        dispatch(setError('Please fill in all fields'))
+        return
+      }
+      if (!validatePassword(formData.password)) {
+        dispatch(setError('Password must be at least 6 characters with numbers and special characters'))
+        return
+      }
+      
+      // Attempt signup
       const result = await dispatch(signUp({ 
         email: formData.email, 
         password: formData.password, 
         username: formData.username 
       }))
+      
+      // Check if signup was successful or if we need verification
       if (signUp.fulfilled.match(result)) {
-        setMode('verify')
+        if (result.payload.needsVerification) {
+          setMode('verify')
+        }
       }
     } else if (mode === 'verify') {
+      if (!formData.email || !formData.otp) {
+        dispatch(setError('Please enter the OTP code'))
+        return
+      }
       dispatch(verifyOtp({ email: formData.email, token: formData.otp }))
     }
   }
@@ -55,6 +90,13 @@ export const AuthForm = () => {
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode)
     dispatch(clearError())
+    // Reset form when switching modes
+    setFormData({
+      email: '',
+      password: '',
+      username: '',
+      otp: ''
+    })
   }
 
   return (
@@ -228,7 +270,19 @@ export const AuthForm = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/20 rounded-lg p-3"
                 >
-                  {error}
+                  <div>{error}</div>
+                  {error.includes('already registered') && mode === 'signup' && (
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      type="button"
+                      onClick={() => switchMode('signin')}
+                      className="mt-2 text-blue-400 hover:text-blue-300 underline text-sm transition-colors"
+                    >
+                      Switch to Sign In
+                    </motion.button>
+                  )}
                 </motion.div>
               )}
 

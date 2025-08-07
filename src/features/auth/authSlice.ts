@@ -8,6 +8,7 @@ export interface AuthState {
   error: string | null
   isAuthenticated: boolean
   isInitialized: boolean
+  needsVerification: boolean
 }
 
 const initialState: AuthState = {
@@ -16,7 +17,33 @@ const initialState: AuthState = {
   error: null,
   isAuthenticated: false,
   isInitialized: false,
+  needsVerification: false,
 }
+
+// Check if email already exists
+export const checkEmailExists = createAsyncThunk(
+  'auth/checkEmailExists',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      // Try to sign in with a dummy password to check if email exists
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'dummy-password-check',
+      })
+
+      // If error is "Invalid login credentials", email exists but password is wrong
+      if (error?.message?.includes('Invalid login credentials')) {
+        return { emailExists: true }
+      }
+      
+      // If error is something else, email probably doesn't exist
+      return { emailExists: false }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred'
+      return rejectWithValue(message)
+    }
+  }
+)
 
 // Async thunks for authentication actions
 export const signUp = createAsyncThunk(
@@ -33,11 +60,35 @@ export const signUp = createAsyncThunk(
         }
       })
 
-      if (error) throw error
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.includes('User already registered')) {
+          throw new Error('This email address is already registered. Please sign in instead.')
+        }
+        if (error.message?.includes('already been registered')) {
+          throw new Error('This email address is already registered. Please sign in instead.')
+        }
+        if (error.message?.includes('email address not authorized')) {
+          throw new Error('This email address is not authorized to sign up.')
+        }
+        throw error
+      }
 
-      return data.user
-    } catch (error: any) {
-      return rejectWithValue(error.message)
+      // Check if user was created but already exists (Supabase returns user even for existing emails in some cases)
+      if (data.user && data.user.email_confirmed_at && !data.session) {
+        throw new Error('This email address is already registered. Please sign in instead.')
+      }
+
+      // Check if user needs email verification
+      const needsVerification = !data.user?.email_confirmed_at && !!data.user
+
+      return {
+        user: data.user,
+        needsVerification
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred'
+      return rejectWithValue(message)
     }
   }
 )
@@ -51,11 +102,24 @@ export const signIn = createAsyncThunk(
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. Please check your credentials and try again.')
+        }
+        if (error.message?.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link before signing in.')
+        }
+        if (error.message?.includes('Too many requests')) {
+          throw new Error('Too many login attempts. Please wait a moment before trying again.')
+        }
+        throw error
+      }
 
       return data.user
-    } catch (error: any) {
-      return rejectWithValue(error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred'
+      return rejectWithValue(message)
     }
   }
 )
@@ -73,8 +137,9 @@ export const verifyOtp = createAsyncThunk(
       if (error) throw error
 
       return data.user
-    } catch (error: any) {
-      return rejectWithValue(error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred'
+      return rejectWithValue(message)
     }
   }
 )
@@ -86,8 +151,9 @@ export const signOut = createAsyncThunk(
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       return null
-    } catch (error: any) {
-      return rejectWithValue(error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred'
+      return rejectWithValue(message)
     }
   }
 )
@@ -107,9 +173,16 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
+    setError: (state, action: PayloadAction<string>) => {
+      state.error = action.payload
+    },
     setUser: (state, action: PayloadAction<User | null>) => {
       state.user = action.payload
       state.isAuthenticated = !!action.payload
+      state.needsVerification = false
+    },
+    setNeedsVerification: (state, action: PayloadAction<boolean>) => {
+      state.needsVerification = action.payload
     },
   },
   extraReducers: (builder) => {
@@ -120,6 +193,7 @@ const authSlice = createSlice({
         state.isAuthenticated = !!action.payload
         state.isInitialized = true
         state.loading = false
+        state.needsVerification = false
       })
       // Sign up
       .addCase(signUp.pending, (state) => {
@@ -128,8 +202,11 @@ const authSlice = createSlice({
       })
       .addCase(signUp.fulfilled, (state, action) => {
         state.loading = false
-        state.user = action.payload
-        state.isAuthenticated = !!action.payload
+        if (action.payload.user) {
+          state.user = action.payload.user
+          state.isAuthenticated = !action.payload.needsVerification
+          state.needsVerification = action.payload.needsVerification
+        }
       })
       .addCase(signUp.rejected, (state, action) => {
         state.loading = false
@@ -144,6 +221,7 @@ const authSlice = createSlice({
         state.loading = false
         state.user = action.payload
         state.isAuthenticated = !!action.payload
+        state.needsVerification = false
       })
       .addCase(signIn.rejected, (state, action) => {
         state.loading = false
@@ -158,6 +236,7 @@ const authSlice = createSlice({
         state.loading = false
         state.user = action.payload
         state.isAuthenticated = !!action.payload
+        state.needsVerification = false
       })
       .addCase(verifyOtp.rejected, (state, action) => {
         state.loading = false
@@ -172,6 +251,7 @@ const authSlice = createSlice({
         state.user = null
         state.isAuthenticated = false
         state.error = null
+        state.needsVerification = false
       })
       .addCase(signOut.rejected, (state, action) => {
         state.loading = false
@@ -180,5 +260,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { clearError, setUser } = authSlice.actions
+export const { clearError, setError, setUser, setNeedsVerification } = authSlice.actions
 export default authSlice.reducer
