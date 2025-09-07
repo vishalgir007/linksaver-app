@@ -18,9 +18,17 @@
 
 
 
-###  landing page  & Authentication
+###  landing page 
 
-<img width="1919" height="890" alt="image" src="https://github.com/user-attachments/assets/32419c36-7b80-4f19-8eea-684315b421d4" />
+<img width="1919" height="890" alt="image" src="https://github.com/user-attachments/assets/32419c36-7b80-4f19-8eea-684315b421d4" /> 
+
+
+ & Authentication
+<img width="1918" height="911" alt="image" src="https://github.com/user-attachments/assets/ecafeff0-48dd-4552-a5e4-5a649662d4fd" />
+
+
+
+
 
 <img width="1903" height="926" alt="image" src="https://github.com/user-attachments/assets/917204d9-5a07-4f9c-adda-1eb9011406e0" />
 
