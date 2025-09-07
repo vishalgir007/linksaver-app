@@ -13,20 +13,39 @@ import {
   Sparkles, 
   ArrowRight,
   Play,
-  Star,
   Users,
   TrendingUp,
-  Database,
   Bot,
-  Layers,
-  Eye,
-  Lock,
   Rocket,
   BookmarkPlus,
   FileText,
   Tag
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
+
+interface FeatureCardProps {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  description: string
+  gradient: string
+  delay: number
+}
+
+interface StatsCardProps {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  color: string
+  index: number
+}
+
+interface ProcessCardProps {
+  step: string
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  description: string
+  index: number
+}
 
 export const LandingPage = () => {
   const router = useRouter()
@@ -167,7 +186,7 @@ export const LandingPage = () => {
           >
             <Button
               onClick={() => router.push('/auth')}
-              variant="ghost"
+              variant="outline"
               className="text-blue-200 hover:text-white hover:bg-blue-900/30"
             >
               Sign In
@@ -362,7 +381,7 @@ export const LandingPage = () => {
               Ready to Transform Your Bookmarks?
             </h2>
             <p className="text-xl text-blue-200/80 mb-8 max-w-2xl mx-auto">
-              Join thousands of users who've revolutionized how they save and discover online content with AI.
+              Join thousands of users who&apos;ve revolutionized how they save and discover online content with AI.
             </p>
             <Button
               onClick={() => router.push('/auth')}
@@ -395,7 +414,7 @@ export const LandingPage = () => {
 }
 
 // Feature Card Component
-function FeatureCard({ icon: Icon, title, description, gradient, delay }: any) {
+function FeatureCard({ icon: Icon, title, description, gradient, delay }: FeatureCardProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
 
@@ -424,7 +443,7 @@ function FeatureCard({ icon: Icon, title, description, gradient, delay }: any) {
 }
 
 // Stats Card Component
-function StatsCard({ icon: Icon, label, value, color, index }: any) {
+function StatsCard({ icon: Icon, label, value, color, index }: StatsCardProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
 
@@ -446,7 +465,7 @@ function StatsCard({ icon: Icon, label, value, color, index }: any) {
 }
 
 // Process Card Component
-function ProcessCard({ step, icon: Icon, title, description, index }: any) {
+function ProcessCard({ step, icon: Icon, title, description, index }: ProcessCardProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
 
