@@ -16,14 +16,19 @@
 
 </div>
 
-## 📸 Screenshots
 
-### Authentication & Onboarding
-![LinkSaver Authentication](./docs/images/auth-screen.png)
+
+###  landing page  & Authentication
+
+<img width="1919" height="890" alt="image" src="https://github.com/user-attachments/assets/32419c36-7b80-4f19-8eea-684315b421d4" />
+
+<img width="1903" height="926" alt="image" src="https://github.com/user-attachments/assets/917204d9-5a07-4f9c-adda-1eb9011406e0" />
+
 *Secure user authentication with modern glass-morphism design*
 
 ### Dashboard & Bookmark Management
-![LinkSaver Dashboard](./docs/images/dashboard-screen.png)
+<img width="1904" height="891" alt="image" src="https://github.com/user-attachments/assets/56f4b705-ab9e-4052-bd07-b5f4173b4673" />
+
 *Clean, intuitive dashboard with AI-generated summaries and smart categorization*
 
 ## 🌟 Features
