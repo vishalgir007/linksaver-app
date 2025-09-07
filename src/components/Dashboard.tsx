@@ -1,19 +1,63 @@
 'use client'
 
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { LogOut, User, Settings, Bell } from 'lucide-react'
+import { LogOut, User, Settings, Bell, Bookmark } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useAuth } from '../hooks/useAuth'
+import { useAppDispatch, useAppSelector } from '../hooks/redux'
+import { fetchBookmarks, setSearchQuery, setSelectedCategory, setSortBy } from '../features/bookmarks/bookmarksSlice'
+import { BookmarkForm } from '../features/bookmarks/BookmarkForm'
+import { BookmarkCard } from '../features/bookmarks/BookmarkCard'
+import { BOOKMARK_CATEGORIES } from '../lib/url-utils'
 
 export const Dashboard = () => {
   const { user, logout } = useAuth()
+  const dispatch = useAppDispatch()
+  const { bookmarks, loading, searchQuery, selectedCategory, sortBy, sortOrder } = useAppSelector((state) => state.bookmarks)
+
+  // Load initial bookmarks
+  useEffect(() => {
+    if (user?.id && !loading) {
+      dispatch(fetchBookmarks({ 
+        userId: user.id, 
+        search: searchQuery, 
+        category: selectedCategory, 
+        sortBy, 
+        sortOrder 
+      }))
+    }
+  }, [dispatch, user?.id, searchQuery, selectedCategory, sortBy, sortOrder, loading])
+
+  // Calculate stats
+  const bookmarkCount = bookmarks.filter(bookmark => !bookmark.id.startsWith('temp-')).length
+  const categoriesCount = new Set(bookmarks.map(b => b.category).filter(Boolean)).size
+  const totalVisits = bookmarks.reduce((sum, bookmark) => {
+    // This is a placeholder - in a real app you'd track actual visits
+    return sum + (bookmark.id.startsWith('temp-') ? 0 : 1)
+  }, 0)
 
   const stats = [
-    { label: 'Links Saved', value: '0', color: 'from-blue-500 to-blue-600' },
-    { label: 'Categories', value: '0', color: 'from-purple-500 to-purple-600' },
-    { label: 'Total Visits', value: '0', color: 'from-pink-500 to-pink-600' },
+    { label: 'Links Saved', value: bookmarkCount.toString(), color: 'from-blue-500 to-blue-600' },
+    { label: 'Categories', value: categoriesCount.toString(), color: 'from-purple-500 to-purple-600' },
+    { label: 'Total Visits', value: totalVisits.toString(), color: 'from-pink-500 to-pink-600' },
+    { label: 'Bookmarks', value: bookmarkCount.toString(), color: 'from-green-500 to-green-600' },
   ]
+
+  const handleSearch = (value: string) => {
+    dispatch(setSearchQuery(value))
+  }
+
+  const handleCategoryFilter = (category: string | null) => {
+    dispatch(setSelectedCategory(category))
+  }
+
+  const handleSort = (newSortBy: 'created_at' | 'title' | 'last_accessed') => {
+    const newOrder = sortBy === newSortBy && sortOrder === 'desc' ? 'asc' : 'desc'
+    dispatch(setSortBy({ sortBy: newSortBy, sortOrder: newOrder }))
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -41,9 +85,9 @@ export const Dashboard = () => {
             </motion.div>
             <div>
               <h1 className="text-2xl font-bold text-white">
-                Welcome back, {user?.user_metadata?.username || 'User'}!
+                Welcome back, {user?.user_metadata?.username || "User"}!
               </h1>
-              <p className="text-white/70">Here's your dashboard overview</p>
+              <p className="text-white/70">Here&apos;s your dashboard overview</p>
             </div>
           </div>
 
@@ -66,25 +110,14 @@ export const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* Welcome Card */}
+        {/* Bookmark Input Form */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="mb-8"
         >
-          <Card className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 border-white/20">
-            <CardHeader>
-              <CardTitle className="text-white text-xl">
-                🎉 Account Successfully Created!
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-white/80">
-                Your account has been verified and you're now logged in. Start exploring the features and customize your experience.
-              </p>
-            </CardContent>
-          </Card>
+          <BookmarkForm />
         </motion.div>
 
         {/* Stats Grid */}
@@ -92,7 +125,7 @@ export const Dashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
         >
           {stats.map((stat, index) => (
             <motion.div
@@ -118,67 +151,114 @@ export const Dashboard = () => {
           ))}
         </motion.div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-white">Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-white/5 rounded-full flex items-center justify-center">
-                    <User className="w-8 h-8 text-white/50" />
-                  </div>
-                  <p className="text-white/70">No recent activity yet</p>
-                  <p className="text-white/50 text-sm mt-2">Start using the app to see your activity here</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-white">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="glass" className="w-full justify-start">
-                  <span className="mr-3">📎</span>
-                  Add New Link
-                </Button>
-                <Button variant="glass" className="w-full justify-start">
-                  <span className="mr-3">📁</span>
-                  Create Category
-                </Button>
-                <Button variant="glass" className="w-full justify-start">
-                  <span className="mr-3">📊</span>
-                  View Analytics
-                </Button>
-                <Button variant="glass" className="w-full justify-start">
-                  <span className="mr-3">⚙️</span>
-                  Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* User Info Card */}
+        {/* Search and Filter Controls */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          transition={{ delay: 0.5 }}
+          className="mb-6"
+        >
+          <Card className="bg-white/5 border-white/10">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search bookmarks..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <select
+                    value={selectedCategory || ''}
+                    onChange={(e) => handleCategoryFilter(e.target.value || null)}
+                    className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {BOOKMARK_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat} className="bg-slate-800">
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <Button
+                    variant="glass"
+                    size="sm"
+                    onClick={() => handleSort('created_at')}
+                    className="px-3"
+                  >
+                    Date {sortBy === 'created_at' && (sortOrder === 'desc' ? '↓' : '↑')}
+                  </Button>
+                  
+                  <Button
+                    variant="glass"
+                    size="sm"
+                    onClick={() => handleSort('title')}
+                    className="px-3"
+                  >
+                    Title {sortBy === 'title' && (sortOrder === 'desc' ? '↓' : '↑')}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Bookmarks Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mb-8"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Bookmark className="w-5 h-5 mr-2" />
+                Your Bookmarks ({bookmarkCount})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {bookmarks.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-white/5 rounded-full flex items-center justify-center">
+                    <Bookmark className="w-8 h-8 text-white/50" />
+                  </div>
+                  <p className="text-white/70 text-lg mb-2">No bookmarks yet</p>
+                  <p className="text-white/50 text-sm">
+                    Start by adding your first bookmark above!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {bookmarks.map((bookmark) => (
+                    <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+                  ))}
+                </div>
+              )}
+              
+              {loading && (
+                <div className="text-center py-8">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full mx-auto"
+                  />
+                  <p className="text-white/70 mt-2">Loading more bookmarks...</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* User Info Card - Simplified */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
           className="mt-8"
         >
           <Card>
