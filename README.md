@@ -321,10 +321,7 @@ npm run build
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 👨‍💻 Author
-
-**Aniket Yadav**
-- GitHub: [@Aniketyadav77](https://github.com/Aniketyadav77)
-- LinkedIn: [Connect with me](https://linkedin.com/in/aniketyadav77)
+Vishal Goswami 
 
 ## 🙏 Acknowledgments
 
